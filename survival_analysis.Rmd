@@ -31,8 +31,8 @@ path_lily = c("../data/FBVAR.csv")
 
 
 ## ------------- working directories for Jenn ----------
-# wd_jenn = 
-# path_jenn = 
+# wd_jenn = '/Users/jenn/Desktop/Comparative-analysis-of-treatments-of-CAA'
+# path_jenn = c("TEVAR_PROC.csv")
 
 ## ------------- working directories for Thu ----------
 wd_thu = '/Users/thuvu/Desktop/Comparative-analysis-of-treatments-of-CAA'
