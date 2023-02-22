@@ -1,0 +1,299 @@
+---
+title: "Univariate Analysis for the VQI FBVAR Dataset"
+author: "Jennifer Ci, Thu Vu, Lily Hanyi Wang"
+output: pdf_document
+---
+
+
+```{r library, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE,fig.width = 10)
+library(tidyverse)
+library(table1)
+library(survival)
+library(Hmisc)
+library(ggplot2)
+library(ggpubr)
+library(expss)
+```
+
+```{r setup wd}
+## ------------- working directories for Lily ----------
+wd_lily = '/Users/hanyiwang/Desktop/Comparative-analysis-of-treatments-of-CAA'
+# path_lily = c("../data/FBVAR.csv")
+path_lily = c("../data/TEVAR_PROC.csv")
+
+
+## ------------- working directories for Jenn ----------
+#wd_jenn = '/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA'
+#path_jenn = c(
+#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210712/TEV#AR_International_LTF_r12_2_14_20210701.csv",
+#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210712/TEV#AR_International_PROC_r12_2_14_20210701.csv",
+#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210901/TEVA#R_International_LTF_r12_2_14_20210901.csv",
+#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210901/TEV#AR_International_PROC_r12_2_14_20210901.csv")
+
+## ------------- read data ----------
+setwd(wd_lily)
+TEVAR_PROC = read.csv(path_lily)
+
+#setwd(wd_jenn)
+#TEVAR_LTF_07 = read.csv(path_jenn[1])
+#TEVAR_PROC_07 = read.csv(path_jenn[2])
+#TEVAR_LTF_09 = read.csv(path_jenn[3])
+#TEVAR_PROC_09 = read.csv(path_jenn[4])
+
+## ------------- modify variables class----------
+
+names <- c('NUM_TREATED_BRANCHES', 'NUM_TREATED_RENALS',"PREOP_GFR_CAT","POSTOP_GFR_CAT")
+TEVAR_PROC[,names] <- lapply(TEVAR_PROC[,names] , factor)
+
+## ------------- modify labels and units ----------
+TEVAR_PROC = apply_labels(TEVAR_PROC,
+                          ################
+                          PRESENTATION = "Presentation",
+                          AGE = "Age",
+                          AGECAT = "Age categories",
+                          GENDER = "Gender",
+                          ETHNICITY = "Ethnicity",
+                          RACE = "Race",
+                          TRANSFER = "Transfer",
+                          PRIMARYINSURER = "Primary Insurer",
+                          LIVINGSTATUS = "Living Status",
+                          PREOP_FUNCSTATUS = "Functional Status",
+                          PRIOR_CVD = "Cerebrovascular Disease History",
+                          PRIOR_CAD = "Coronary Artery Disease History",
+                          PRIOR_CHF = "Congestive Heart Failure History",
+                          COPD = "Chronic Obstructive Pulmonary Disorder History",
+                          DIABETES = "Diabetes History",
+                          PREOP_DIALYSIS = "Dialysis Status",
+                          HTN = "Hypertension History",
+                          PREOP_SMOKING = "Smoking Status",
+                          PRIOR_CABG = "History of Coronary Artery Bypass Surgery",
+                          PRIOR_PCI = "History of Percutaneous Coronary Intervention",
+                          PRIOR_ANEURREP = "Aneurysm Repair History",
+                          STRESS = "Stress Test",
+                          PREOP_CREAT = "Creatinine",
+                          PREOP_GFR_CAT = "Glomerular Filtration Rate",
+                          DC_ASA = "Discharge ASA",
+                          DC_P2Y = "Discharge P2Y12 Antagonist",
+                          DC_STATIN = "Discharge Statin",
+                          ################
+                          PRIOR_AORSURG = "Prior Aortic Surgery",
+                          PATHOLOGY = "Pathology",
+                          PREOP_MAXAAADIA = "Maximum Aortic Diameter",
+                          URGENCY = "Urgency",
+                          PATHOLOGY_ANEURYSM_TYPE = "Aneurysm Type",
+                          PATHOLOGY_DISSECT_TYPE = "Dissection Type",
+                          PROXZONE_DISEASE = "Proximal Zone of Disease",
+                          GENHIST = "Genetic History",
+                          DISTZONE_DISEASE = "Distal Zone of Disease",
+                          extent = "Type of TAAA",
+                          ANESTHESIA = "Anesthesia",
+                          CONTRAST = "Iodinated Contrast",
+                          EBL = "Estimated Blood Loss",
+                          FLUOROTIME = "Fluoroscopy Time",
+                          INTRAOP_PRBC = "Packed Red Blood Cells given in OR or Preop",
+                          TOTALPROCTIME = "Total Procedure Time",
+                          IVUSTEE = "Intravascular ultrasound (IVUS) or Transesophageal Echo (TEE)",
+                          ACCESS = "Left or Right Access",
+                          ARMNECK_ACCESS = "Arm/Neck Access",
+                          AORDEV_NUM = "Number of Aortic Devices",
+                          AORDEV_CMOD = "Custom/Modified Devices",
+                          DEV_GTYPE = "Graft Type",
+                          ILIACDEV_END_R = "Right Iliac Endpoint",
+                          ILIACDEV_END_L = "Left Iliac Endpoint",
+                          BRANCH_STAGED = "Staged Branch Treatment",
+                          BRANCH_LSUB = "Left Subclavian Proximal Branch Treatment",
+                          BRANCH_CELIAC = "Celiac Proximal Branch Treatment",
+                          BRANCH_SMA = "SMA Proximal Branch Treatment",
+                          BRANCH_RRENAL = "Right Renal Poximal Branch Treatment",
+                          BRANCH_LRENAL = "Left Renal Proximal Branch Treatment",
+                          ANESTHESIA_GEN_TIMEEXT = "Time to Extubation",
+                          POSTOP_SPINALDRAIN = "Spinal Drain Placement",
+                          lrenal = "Treatment Left Renal",
+                          rrenal = "Treatment Right Renal",
+                          sma = "Treatment SMA",
+                          celiac = "Treatment Celiac",
+                          lsub = "Treatment Left Subclavian",
+                          NUM_TREATED_BRANCHES = "Number of Treated Branches",
+                          NUM_TREATED_RENALS = "Number of Treated Renals",
+                          OCCLUDED_RENAL = "Number of Occluded Renals",
+                          OCCLUDED_SMA = "SMA Proximal Branch Occluded",
+                          OCCLUDED_CELIAC  = "Celiac Proximal Branch Occluded",
+                          ################
+                          DEAD = "Death",
+                          PROC_SURVIVALDAYS = "Survival Days",
+                          TOTAL_LOS = "Length of stay in days between admission date and discharge date",
+                          POSTOP_LOS = "Length of stay in days between surgery date and discharge date",
+                          AORDEV_TECHSUCC = "Deployment Technical Success",
+                          CONVTOOPEN = "Conversion to Open",
+                          LEAKATCOMP_NONE = "Endoleak at Completion of Procedure",
+                          ICUSTAY = "ICU Stay",
+                          POSTOP_PRBC = "Transfusion # Units PRBC",
+                          POSTOP_VASO = "Vasopressors Post-op",
+                          POSTOP_HIGHCREAT = "Highest Creatinine",
+                          POSTOP_GFR_CAT = "GFR Post-op",
+                          POSTOP_COMPLICATIONS = "Any Complications Post-op",
+                          ACCESS_COMPLICATION = "Puncture Site Hematoma or Access Site Occlusion",
+                          POSTOP_AH = "Post-op Abnormal Heart Disease or Myocardial Infarction or Dysrhythmia",
+                          POSTOP_CEREBROSX = "Post-op Cerebrovascular Stroke",
+                          POSTOP_RESPIRATORY = "Post-op Respiratory",
+                          POSTOP_DIALYSIS = "Post-op Dialysis",
+                          POSTOP_ARMEMBO = "Arm Ischemia/Emboli",
+                          POSTOP_LEGEMBO = "Leg Ischemia/Emboli",
+                          POSTOP_LEGCOMPART = "Leg Compartment Syndrome",
+                          POSTOP_INTISCH = "Post-op Intestinal Ischemia",
+                          POSTOP_RENALISCH = "Post-op Renal Ischemia",
+                          POSTOP_SPINAL_ISCHEMIA = "Post-op Spinal Ischemia",
+                          RETX_R_RTOR = "Reintervention",
+                          DC_STATUS = "Discharge Status",
+                          BRANCH_POST = "Post-treatment Status of All Branches"
+                          )
+
+```
+
+## p-value
+
+We use Welch's Two Sample t-test for continuous variables and Pearson's Chi-squared Test for categorical variables.
+
+```{r}
+## ------------- p-value function ----------
+
+pvalue <- function(x, ...) {
+    y <- unlist(x)
+    g <- factor(rep(1:length(x), times=sapply(x, length)))
+    if (is.numeric(y)) {
+        # For numeric variables, Welch's Two Sample t-test
+        p <- t.test(y ~ g)$p.value
+    } else {
+        # For categorical variables, Pearson's Chi-squared Test
+        p <- chisq.test(table(y, g))$p.value
+    }
+    c("", sub("<", "&lt;", format.pval(p, digits=3, eps=0.001)))
+}
+
+```
+
+## Descriptive statistics tables
+
+
+### population of interest 
+
+```{r}
+## ------------- population of interest ----------
+table1_POI = table1(~  PRESENTATION, data = TEVAR_PROC)
+knitr::kable(table1_POI)
+```
+
+### Patient demographic and co-morbidities
+
+**Table: A comparison of the baseline demographic and co-morbidities characteristics for symptomatic versus asymptomatic patients who undergo the F-BEVAR procedure**
+
+```{r}
+## ------------- table: Patient demographic and co-morbidities----------
+
+table1_CMB = table1(~   AGE+AGECAT+GENDER+ETHNICITY+ RACE+ TRANSFER+ PRIMARYINSURER+ LIVINGSTATUS+ PREOP_FUNCSTATUS+ PRIOR_CVD+ PRIOR_CAD+ PRIOR_CHF+ COPD+ DIABETES+ PREOP_DIALYSIS+ HTN+ PREOP_SMOKING+ PRIOR_CABG+ PRIOR_PCI+ PRIOR_ANEURREP+ STRESS+ PREOP_CREAT+PREOP_GFR_CAT+ DC_ASA+DC_P2Y+DC_STATIN
+       | PRESENTATION, data = TEVAR_PROC,overall=F, extra.col=list(`P-value`=pvalue))
+knitr::kable(table1_CMB)
+
+```
+
+
+### Operative Variables
+
+**Table: A comparison of the operative characteristics for symptomatic versus asymptomatic patients who undergo the F-BEVAR procedure**
+
+```{r}
+## ------------- table:  Operative Variables----------
+
+table1_OPR = table1(~ PRIOR_AORSURG+ PATHOLOGY+ PREOP_MAXAAADIA+ URGENCY+ PATHOLOGY_ANEURYSM_TYPE+ PATHOLOGY_DISSECT_TYPE+ GENHIST+PROXZONE_DISEASE+ DISTZONE_DISEASE+ extent+ ANESTHESIA+ CONTRAST+ EBL+FLUOROTIME+ INTRAOP_PRBC+TOTALPROCTIME+IVUSTEE+ ACCESS+ARMNECK_ACCESS+ AORDEV_NUM+ AORDEV_CMOD+ DEV_GTYPE+ ILIACDEV_END_R+ ILIACDEV_END_L+ BRANCH_STAGED+ BRANCH_LSUB+ BRANCH_CELIAC+ BRANCH_SMA+BRANCH_RRENAL+ BRANCH_LRENAL+ ANESTHESIA_GEN_TIMEEXT+ POSTOP_SPINALDRAIN+lrenal+rrenal+sma+celiac+lsub+(NUM_TREATED_BRANCHES)+ (NUM_TREATED_RENALS)+ OCCLUDED_RENAL+ OCCLUDED_SMA+ OCCLUDED_CELIAC
+       | PRESENTATION, data = TEVAR_PROC,overall=F, extra.col=list(`P-value`=pvalue))
+
+knitr::kable(table1_OPR)
+
+```
+
+
+### Outcomes
+
+**Table 3: A comparison of the long term follow-up outcomes for symptomatic versus asymptomatic patients who undergo the F-BEVAR procedure**
+
+```{r}
+## ------------- table: primary outcomes----------
+table1_POC = table1(~ DEAD+PROC_SURVIVALDAYS | PRESENTATION, data = TEVAR_PROC,overall=F, extra.col=list(`P-value`=pvalue))
+
+knitr::kable(table1_POC)
+
+```
+
+**Table 3: A comparison of the procedure outcomes for symptomatic versus asymptomatic patients who undergo the F-BEVAR procedure**
+
+```{r}
+## ------------- table: secondary outcomes----------
+table1_SOC = table1(~ TOTAL_LOS+ POSTOP_LOS+ AORDEV_TECHSUCC+ CONVTOOPEN+ LEAKATCOMP_NONE+ ICUSTAY+ POSTOP_PRBC+ POSTOP_VASO+ POSTOP_HIGHCREAT+POSTOP_GFR+POSTOP_GFR_CAT+POSTOP_COMPLICATIONS+ ACCESS_COMPLICATION+POSTOP_AH+ POSTOP_CEREBROSX+ POSTOP_RESPIRATORY+ POSTOP_DIALYSIS+ POSTOP_ARMEMBO+ POSTOP_LEGEMBO+ POSTOP_LEGCOMPART+ POSTOP_INTISCH+ POSTOP_RENALISCH+ POSTOP_SPINAL_ISCHEMIA+ RETX_R_RTOR+ DC_STATUS+ BRANCH_POST
+       | PRESENTATION, data = TEVAR_PROC,overall=F, extra.col=list(`P-value`=pvalue))
+
+knitr::kable(table1_SOC)
+
+```
+
+Number of re-intervention table
+
+
+```{r}
+## ------------- table: number of re-intervention ----------
+
+
+```
+
+
+### Volume Variables 
+  
+Volume Variables: `REGIONID`, `CENTERID`, `PHYSICIANID`
+
+```{r}
+## ------------- clustering variables----------
+
+#FBVAR %>% select(REGIONID) %>% table() 
+#FBVAR %>% select(CENTERID) %>% table() 
+#FBVAR %>% select(PHYSICIANID) %>% table() 
+
+## ------------- plots of volume----------
+center_vol = as.data.frame(TEVAR_PROC %>% select(CENTERID) %>% table())
+phys_vol = as.data.frame(TEVAR_PROC %>% select(PHYSICIANID) %>% table())
+
+p1 = ggplot(data = center_vol, aes(x=CENTERID, y=Freq)) + 
+  geom_point() +
+  labs(title = 'Volume of centers',x='Center ID',y='Volume')
+
+p2 = ggplot(data = center_vol, aes(x='', y=Freq)) + 
+  geom_boxplot() +
+  labs(title = 'Boxplot of center volumes',x='',y='Volume')
+
+print(ggarrange(p1, p2, widths = c(20,10),ncol = 2, nrow = 1, align = "h"))
+
+p3 = ggplot(data = phys_vol, aes(x=PHYSICIANID, y=Freq)) + 
+  geom_point() +
+  labs(title = 'Volume of physicians',x='Physician ID',y='Volume')
+
+p4 = ggplot(data = phys_vol, aes(x='', y=Freq)) + 
+  geom_boxplot() +
+  labs(title = 'Boxplot of physicians volumes',x='',y='Volume')
+
+print(ggarrange(p3, p4, widths = c(20,10),ncol = 2, nrow = 1, align = "h"))
+
+```
+
+`r nlevels(factor(TEVAR_PROC$REGIONID))` regions, `r nlevels(factor(TEVAR_PROC$CENTERID))` centers, `r nlevels(factor(TEVAR_PROC$PHYSICIANID))` physicians. 
+
+Quantiles of centers' volume: `r quantile(center_vol[order(center_vol$Freq),]$Freq)`
+
+Quantiles of physicians' volume: `r quantile(phys_vol[order(phys_vol$Freq),]$Freq)`
+
+
+\newpage
+## Code Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE,include=TRUE}
+```
+
+

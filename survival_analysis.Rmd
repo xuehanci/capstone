@@ -1,0 +1,132 @@
+---
+title: "Survival Analysis for the VQI FBVAR Dataset"
+author: "Jennifer Ci, Thu Vu, Lily Hanyi Wang"
+output: pdf_document
+---
+
+```{r library, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE)
+knitr::opts_chunk$set(fig.width=20, fig.height=20)
+
+library(tidyverse)
+library(table1)
+library(survival)
+library(Hmisc)
+library(ggplot2)
+library(ggpubr)
+library(corrplot)
+library(caret)
+library(survminer)
+library(knitr)
+library(kableExtra)
+library(gtsummary)
+library(flextable)
+
+```
+
+```{r setup wd}
+## ------------- working directories for Lily ----------
+wd_lily = '/Users/hanyiwang/Desktop/Comparative-analysis-of-treatments-of-CAA'
+path_lily = c("../data/FBVAR.csv")
+
+
+## ------------- working directories for Jenn ----------
+# wd_jenn = 
+# path_jenn = 
+
+## ------------- working directories for Thu ----------
+wd_thu = '/Users/thuvu/Desktop/Comparative-analysis-of-treatments-of-CAA'
+path_thu = c("TEVAR_PROC.csv")
+
+## ------------- read data ----------
+# setwd(wd_lily)
+# FBVAR = read.csv(path_lily)
+
+# setwd(wd_jenn)
+# FBVAR = read.csv(path_jenn)
+
+setwd(wd_thu)
+TEVAR_PROC1 = read.csv(path_thu)
+
+```
+
+
+# Cox proportional hazards model for survival analysis
+
+Unadjusted survival curves. Time scale changed from calendar days to calendar years. Used log rank test to produce p-value. Median survival never reached. 
+
+Any changes needed? (e.g, time scale, colors, change to at risk table, add number of censored and/or uncensored events, etc.)
+
+```{r, fig.width=8, fig.height=6}
+## Omitting patients with negative survival days
+TEVAR_PROC <- subset(TEVAR_PROC1, PROC_SURVIVALDAYS>=0)
+
+## Survival analysis
+tte <- TEVAR_PROC %>% with(Surv(PROC_SURVIVALDAYS/365, DEAD))
+
+# compute survival curves
+fit <- survfit(tte ~ PRESENTATION, data=TEVAR_PROC)
+
+ggsurv <- ggsurvplot(fit,
+           risk.table = TRUE, 
+           linetype = "strata",
+           surv.median.line = "hv", 
+           ggtheme = theme_bw(), 
+           xlab = "Time (Year)",
+           legend.labs = c("Asymptomatic", "Symptomatic"),
+           break.time.by=1)
+
+ggsurv$plot <- ggsurv$plot +
+ annotate(
+    "text",
+    x = 2.5, y = 0.25,
+    label = "Unadjusted HR = 2.06 (95% CI: 1.65,2.58) 
+    \n Adjusted HR = 1.85 (95% CI: 1.41,2.41)
+    \n p < 0.001",
+    size = 4
+  )
+
+ggsurv
+
+```
+
+Univariate (unadjusted) and Multivariate (adjusted) Cox Proportional Hazards Models. Reference group is asymptomatic patients. 
+
+Variables to adjust for:
+
+- cluster on `CENTERID` 
+
+- `AGECAT`, `GENDER`, `PREOP_SMOKING`, `PRIOR_AORSURG`, `PRIOR_CHF`, `PREOP_DIALYSIS`
+
+- `PATHOLOGY`, `extent`
+
+In the model, we merge groups for the  `extent`: merge "Juxtarenal AAA" with "Type 4 TAAA"; "Type 1 TAAA", "Type 2 TAAA", "Type 3 TAAA", with "Type 5 TAAA". Now `extent` is a binary variable, Juxtarenal or not. 
+
+```{r, fig.pos="H"}
+TEVAR_PROC = TEVAR_PROC %>%
+  mutate(extent = factor(extent,levels = c("Juxtarenal AAA","Type 1 TAAA","Type 2 TAAA",
+                                           "Type 3 TAAA","Type 4 TAAA","Type 5 TAAA"),
+                         labels = c('Juxtarenal','No','No','No','Juxtarenal','No')))
+
+# Unadjusted survival model
+mod.cox1 <- coxph(tte ~ PRESENTATION, data=TEVAR_PROC)
+
+# Adjusted survival model
+mod.cox2 <- coxph(tte ~ PRESENTATION + cluster(CENTERID) + AGECAT + GENDER + 
+                    PREOP_SMOKING + PRIOR_AORSURG + PRIOR_CHF + 
+                    PREOP_DIALYSIS + PATHOLOGY + extent , 
+                  data=TEVAR_PROC)
+
+t1 <- mod.cox1 %>% tbl_regression(exponentiate = TRUE)
+t2 <- mod.cox2 %>% tbl_regression(exponentiate = TRUE)
+
+t1 %>% as_flex_table()
+t2 %>% as_flex_table()
+```
+
+\newpage
+
+## Code Appendix
+
+```{r, ref.label=knitr::all_labels(),echo=TRUE,eval=FALSE,include=TRUE}
+```
