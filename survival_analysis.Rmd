@@ -9,13 +9,7 @@ knitr::opts_chunk$set(echo = FALSE,message = FALSE,warning = FALSE)
 knitr::opts_chunk$set(fig.width=20, fig.height=20)
 
 library(tidyverse)
-library(table1)
 library(survival)
-library(Hmisc)
-library(ggplot2)
-library(ggpubr)
-library(corrplot)
-library(caret)
 library(survminer)
 library(knitr)
 library(kableExtra)
@@ -26,17 +20,19 @@ library(flextable)
 
 ```{r setup wd}
 ## ------------- working directories for Lily ----------
-wd_lily = '/Users/hanyiwang/Desktop/Comparative-analysis-of-treatments-of-CAA'
-path_lily = c("../data/FBVAR.csv")
+#wd_lily = '/Users/hanyiwang/Desktop/Comparative-analysis-of-treatments-of-CAA'
+#path_lily = c("../data/FBVAR.csv")
 
 
 ## ------------- working directories for Jenn ----------
-# wd_jenn = '/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA'
+# wd_jenn = '/Users/jennci/Desktop/Comparative-analysis-of-treatments-of-CAA'
 # path_jenn = c("TEVAR_PROC.csv")
+
 
 ## ------------- working directories for Thu ----------
 wd_thu = '/Users/thuvu/Desktop/Comparative-analysis-of-treatments-of-CAA'
 path_thu = c("TEVAR_PROC.csv")
+path_thu1 = c("LT 2.csv")
 
 ## ------------- read data ----------
 # setwd(wd_lily)
@@ -47,41 +43,65 @@ path_thu = c("TEVAR_PROC.csv")
 
 setwd(wd_thu)
 TEVAR_PROC1 = read.csv(path_thu)
+LTF = read.csv(path_thu1)
 
 ```
 
+# Variables to adjust for
 
-# Cox proportional hazards model for survival analysis
+In the unadjusted model, we studied only the differences in the outcomes:
 
-Unadjusted survival curves. Time scale changed from calendar days to calendar years. Used log rank test to produce p-value. Median survival never reached. 
+- comparing `PRESENTATION`
 
-Any changes needed? (e.g, time scale, colors, change to at risk table, add number of censored and/or uncensored events, etc.)
+In the adjusted models, we also: 
+
+- cluster on `CENTERID` 
+
+- adjust for `AGECAT`, `GENDER`, `PREOP_SMOKING`, `PRIOR_AORSURG`, `PRIOR_CHF`, `PREOP_DIALYSIS`
+
+- adjust for `PATHOLOGY`, `extent`
+
+- primary outcome: All-cause mortality 
+
+- secondary outcome: Time-to-first reintervention for patients with long-term follow-up 
+
+For the outcomes described below, Kaplan-Meier curves were produced grouped by presentation, asymptomatic and symptomatic. 
+
+For the primary outcome only, we fitted a univariate Cox proportional hazards model and a multivariate stratified Cox proportional hazards model stratifying on sex.
+
+*To fit the models, we merge groups for the  `extent`: merge "Juxtarenal AAA" with "Type 4 TAAA"; "Type 1 TAAA", "Type 2 TAAA", "Type 3 TAAA", with "Type 5 TAAA". Now `extent` is a binary variable, Juxtarenal or not.*
+
+# Primary Outcome: All-Cause Mortality 
 
 ```{r, fig.width=8, fig.height=6}
-## Omitting patients with negative survival days
+### Primary Outcome: All-Cause Mortality 
+# omitting patients with negative survival days
 TEVAR_PROC <- subset(TEVAR_PROC1, PROC_SURVIVALDAYS>=0)
 
-## Survival analysis
+# create survival object, time-to-event
+# converted days to years 
 tte <- TEVAR_PROC %>% with(Surv(PROC_SURVIVALDAYS/365, DEAD))
 
 # compute survival curves
 fit <- survfit(tte ~ PRESENTATION, data=TEVAR_PROC)
 
+# plotting KM curves
 ggsurv <- ggsurvplot(fit,
            risk.table = TRUE, 
            linetype = "strata",
            surv.median.line = "hv", 
            ggtheme = theme_bw(), 
-           xlab = "Time (Year)",
+           xlab = "Time (in years)",
            legend.labs = c("Asymptomatic", "Symptomatic"),
-           break.time.by=1)
+           break.time.by=1, 
+           caption="HR = Hazard Ratio, CI = Confidence Interval")
 
 ggsurv$plot <- ggsurv$plot +
  annotate(
     "text",
     x = 2.5, y = 0.25,
     label = "Unadjusted HR = 2.06 (95% CI: 1.65,2.58) 
-    \n Adjusted HR = 1.85 (95% CI: 1.41,2.41)
+    \n Adjusted HR = 1.84 (95% CI: 1.41,2.41)
     \n p < 0.001",
     size = 4
   )
@@ -90,19 +110,10 @@ ggsurv
 
 ```
 
-Univariate (unadjusted) and Multivariate (adjusted) Cox Proportional Hazards Models. Reference group is asymptomatic patients. 
-
-Variables to adjust for:
-
-- cluster on `CENTERID` 
-
-- `AGECAT`, `GENDER`, `PREOP_SMOKING`, `PRIOR_AORSURG`, `PRIOR_CHF`, `PREOP_DIALYSIS`
-
-- `PATHOLOGY`, `extent`
-
-In the model, we merge groups for the  `extent`: merge "Juxtarenal AAA" with "Type 4 TAAA"; "Type 1 TAAA", "Type 2 TAAA", "Type 3 TAAA", with "Type 5 TAAA". Now `extent` is a binary variable, Juxtarenal or not. 
+Due to violating the proportional-hazards assumption, the multivariate Cox proportional-hazards model was stratified on sex to resolve this issue. 
 
 ```{r, fig.pos="H"}
+# changing extent into a binary variable
 TEVAR_PROC = TEVAR_PROC %>%
   mutate(extent = factor(extent,levels = c("Juxtarenal AAA","Type 1 TAAA","Type 2 TAAA",
                                            "Type 3 TAAA","Type 4 TAAA","Type 5 TAAA"),
@@ -112,16 +123,78 @@ TEVAR_PROC = TEVAR_PROC %>%
 mod.cox1 <- coxph(tte ~ PRESENTATION, data=TEVAR_PROC)
 
 # Adjusted survival model
-mod.cox2 <- coxph(tte ~ PRESENTATION + cluster(CENTERID) + AGECAT + GENDER + 
+mod.cox2 <- coxph(tte ~ PRESENTATION + cluster(CENTERID) + AGECAT + strata(GENDER) + 
                     PREOP_SMOKING + PRIOR_AORSURG + PRIOR_CHF + 
                     PREOP_DIALYSIS + PATHOLOGY + extent , 
                   data=TEVAR_PROC)
 
-t1 <- mod.cox1 %>% tbl_regression(exponentiate = TRUE)
-t2 <- mod.cox2 %>% tbl_regression(exponentiate = TRUE)
+t1 <- mod.cox1 %>% 
+  tbl_regression(exponentiate = TRUE, 
+                 tidy_fun = broom.mixed::tidy,
+                 pvalue_fun = function(x) style_pvalue(x, digits = 2)) %>%
+  bold_p(t = 0.05)
+tbl_merge(tbls = list(t1),tab_spanner ="**All-Cause Mortality**") %>% 
+  as_flex_table()
 
-t1 %>% as_flex_table()
-t2 %>% as_flex_table()
+t2 <- mod.cox2 %>% 
+  tbl_regression(exponentiate = TRUE, 
+                 tidy_fun = broom.mixed::tidy,
+                 pvalue_fun = function(x) style_pvalue(x, digits = 2)) %>%
+  bold_p(t = 0.05)
+tbl_merge(tbls = list(t2),tab_spanner ="**All-Cause Mortality**") %>% 
+  as_flex_table()
+
+```
+
+\newpage
+
+# Secondary Outcome: Long-term Follow-up First Reintervention (time-to-event outcome)
+
+```{r, fig.width=8, fig.height=6}
+### Secondary Outcome: Long-term Follow-up First Reintervention 
+### (time-to-event outcome)
+# filtering the LTF dataset to only include FEVAR procedures
+t <- as.data.frame(table(TEVAR_PROC1$PRIMPROCID))
+LTF_merge <- LTF[LTF$PRIMPROCID %in% t$Var1,]
+
+# replacing all missing in number of reinterventions with 0
+LTF_merge$total_reint[is.na(LTF_merge$total_reint)] <- 0
+
+# creating event variable, binary re-intervention
+# 1 = had at least 1 reintervention, 0 = had 0 reinterventions
+LTF_merge$retx_bin <- ifelse(LTF_merge$total_reint>=1, 1, 0)
+# creating time variable (in days)
+LTF_merge$time <- ifelse(LTF_merge$retx_bin==1, 
+                         LTF_merge$first_reint_time, LTF_merge$new_surv)
+
+# omitting patients with negative survival days
+LTF_merge <- subset(LTF_merge, time>=0)
+
+# merging proc and ltf datasets on procedure ID
+LTF_comb <- merge(LTF_merge, TEVAR_PROC1, by = "PRIMPROCID")
+
+# create survival object, time-to-event
+# converted days to years 
+tte1 <- LTF_comb %>% with(Surv(time/365, retx_bin))
+
+# compute survival curves
+fit1 <- survfit(tte1~PRESENTATION, data=LTF_comb)
+
+# plotting KM curves
+ggsurvplot(
+  fit1,
+  pval = TRUE,
+  risk.table = TRUE,
+  linetype = "strata",
+  ggtheme = theme_bw(),
+  legend.labs = c("Asymptomatic", "Symptomatic"),
+  xlab = "Time (in years)",
+  ylab = "Non-reintervention probability",
+  break.time.by = 1,
+  xlim = c(0,5),
+  caption = "HR = Hazard Ratio, CI = Confidence Interval"
+)
+
 ```
 
 \newpage

@@ -25,21 +25,14 @@ path_lily = c("../data/TEVAR_PROC.csv")
 
 ## ------------- working directories for Jenn ----------
 #wd_jenn = '/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA'
-#path_jenn = c(
-#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210712/TEV#AR_International_LTF_r12_2_14_20210701.csv",
-#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210712/TEV#AR_International_PROC_r12_2_14_20210701.csv",
-#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210901/TEVA#R_International_LTF_r12_2_14_20210901.csv",
-#  "/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA/TEVAR_International_20210901/TEV#AR_International_PROC_r12_2_14_20210901.csv")
+#path_jenn = path_jenn = c("TEVAR_PROC.csv")
 
 ## ------------- read data ----------
 setwd(wd_lily)
 TEVAR_PROC = read.csv(path_lily)
 
 #setwd(wd_jenn)
-#TEVAR_LTF_07 = read.csv(path_jenn[1])
-#TEVAR_PROC_07 = read.csv(path_jenn[2])
-#TEVAR_LTF_09 = read.csv(path_jenn[3])
-#TEVAR_PROC_09 = read.csv(path_jenn[4])
+#TEVAR_PROC = read.csv(path_jenn)
 
 ## ------------- modify variables class----------
 

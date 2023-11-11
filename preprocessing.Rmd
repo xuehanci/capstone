@@ -24,16 +24,34 @@ path_lily = c(
   "../data/TEVAR_International_202301/TEVAR_International_LTF_20230103.csv",
   "../data/TEVAR_International_202301/TEVAR_International_PROC_20230103.csv")
 
+## ------------- working directories for Jennifer ----------
+wd_jenn = '/Users/jenniferci/Desktop/Comparative-analysis-of-treatments-of-CAA'
+path_jenn = c(
+  "../data/TEVAR_International_20210712/TEVAR_International_LTF_r12_2_14_20210701.csv",
+  "../data/TEVAR_International_20210712/TEVAR_International_PROC_r12_2_14_20210701.csv",
+  "../data/TEVAR_International_20210901/TEVAR_International_LTF_r12_2_14_20210901.csv",
+  "../data/TEVAR_International_20210901/TEVAR_International_PROC_r12_2_14_20210901.csv",
+  "../data/TEVAR_PROC.csv",
+  "../data/TEVAR_International_202301/TEVAR_International_LTF_20230103.csv",
+  "../data/TEVAR_International_202301/TEVAR_International_PROC_20230103.csv")
 ## ------------- read data ----------
-setwd(wd_lily)
+# setwd(wd_lily)
 # TEVAR_LTF_07 = read.csv(path_lily[1])
 # TEVAR_LTF_09 = read.csv(path_lily[3])
 # TEVAR_LTF_2301 = read.csv(path_lily[6])
 
-TEVAR_PROC_07 = read.csv(path_lily[2])
-TEVAR_PROC_09 = read.csv(path_lily[4])
-TEVAR_PROC_2301 = read.csv(path_lily[7])
+# TEVAR_PROC_07 = read.csv(path_lily[2])
+# TEVAR_PROC_09 = read.csv(path_lily[4])
+# TEVAR_PROC_2301 = read.csv(path_lily[7])
 
+
+setwd(wd_jenn)
+# TEVAR_LTF_07 = read.csv(path_jenn[1])
+# TEVAR_LTF_09 = read.csv(path_jenn[3])
+# TEVAR_LTF_2301 = read.csv(path_jenn[6])
+TEVAR_PROC_07 = read.csv(path_jenn[2])
+TEVAR_PROC_09 = read.csv(path_jenn[4])
+TEVAR_PROC_2301 = read.csv(path_jenn[7])
 ```
 
 ## Datasets Merging
@@ -47,9 +65,9 @@ Compare the data from July 2021, September 2021 and January 2023. Keep the most 
 # TEVAR_LTF_2301 = (TEVAR_LTF_2301 %>% select(colnames(TEVAR_LTF_2301)[colnames(TEVAR_LTF_2301) %in% colnames(TEVAR_LTF_09)]))
 # 
 # # find new data and merge the 3 datasets
-# TEVAR_LTF <- rbind(TEVAR_LTF_07[! TEVAR_LTF_07$PATIENTID  %in% TEVAR_LTF_09$PATIENTID,],
+# TEVAR_LTF <- rbind(TEVAR_LTF_07[! TEVAR_LTF_07$PATIENTID %in% TEVAR_LTF_09$PATIENTID,],
 #                    TEVAR_LTF_09)
-# TEVAR_LTF <- rbind(TEVAR_LTF_2301[! TEVAR_LTF_2301$PATIENTID  %in% TEVAR_LTF$PATIENTID,],
+# TEVAR_LTF <- rbind(TEVAR_LTF_2301[! TEVAR_LTF_2301$PATIENTID %in% TEVAR_LTF$PATIENTID,],
 #                    TEVAR_LTF)
 # 
 # # filter the varaibles in the LTF dataset
@@ -58,9 +76,9 @@ Compare the data from July 2021, September 2021 and January 2023. Keep the most 
 # Similar for PROC data 
 TEVAR_PROC_2301 = (TEVAR_PROC_2301 %>% select(colnames(TEVAR_PROC_2301)[colnames(TEVAR_PROC_2301) %in% colnames(TEVAR_PROC_09)]))
 
-TEVAR_PROC <-rbind(TEVAR_PROC_07[! TEVAR_PROC_07$PATIENTID  %in% TEVAR_PROC_09$PATIENTID,],
+TEVAR_PROC <-rbind(TEVAR_PROC_07[! TEVAR_PROC_07$PATIENTID %in% TEVAR_PROC_09$PATIENTID,],
                    TEVAR_PROC_09)
-TEVAR_PROC <- rbind(TEVAR_PROC[! TEVAR_PROC$PATIENTID  %in% TEVAR_PROC_2301$PATIENTID,],
+TEVAR_PROC <- rbind(TEVAR_PROC[! TEVAR_PROC$PATIENTID %in% TEVAR_PROC_2301$PATIENTID,],
                    TEVAR_PROC_2301)
 
 ```
@@ -184,16 +202,16 @@ TEVAR_PROC = TEVAR_PROC %>%
   mutate(POSTOP_GFR = 142*(POSTOP_min^GFR_alpha)*(POSTOP_max^(-1.2))*(0.9938^AGE)*(isfemale))
 
 TEVAR_PROC = TEVAR_PROC %>% 
-  mutate(PREOP_GFR_CAT = case_when(PREOP_GFR >= 90 ~ 1,
-                                   PREOP_GFR > 60 & PREOP_GFR < 89 ~ 2,
-                                   PREOP_GFR > 30 & PREOP_GFR < 59 ~ 3,
+  mutate(PREOP_GFR_CAT = case_when(PREOP_GFR > 89 ~ 1,
+                                   PREOP_GFR > 59 & PREOP_GFR < 89 ~ 2,
+                                   PREOP_GFR > 29 & PREOP_GFR < 59 ~ 3,
                                    PREOP_GFR > 15 & PREOP_GFR < 29 ~ 4,
-                                   PREOP_GFR <15 ~ 5)) %>%
-  mutate(POSTOP_GFR_CAT = case_when(POSTOP_GFR >= 90 ~ 1,
-                                    POSTOP_GFR > 60 & POSTOP_GFR < 89 ~ 2,
-                                    POSTOP_GFR > 30 & POSTOP_GFR < 59 ~ 3,
+                                   PREOP_GFR < 15 ~ 5)) %>%
+  mutate(POSTOP_GFR_CAT = case_when(POSTOP_GFR > 89 ~ 1,
+                                    POSTOP_GFR > 59 & POSTOP_GFR < 89 ~ 2,
+                                    POSTOP_GFR > 29 & POSTOP_GFR < 59 ~ 3,
                                     POSTOP_GFR > 15 & POSTOP_GFR < 29 ~ 4,
-                                    POSTOP_GFR <15 ~ 5))
+                                    POSTOP_GFR < 15 ~ 5))
   
 TEVAR_PROC = TEVAR_PROC %>% 
   mutate(PREOP_GFR_CAT = factor(PREOP_GFR_CAT,levels = c(1,2,3,4,5),
@@ -657,7 +675,9 @@ TEVAR_PROC = TEVAR_PROC %>% select(
   REGIONID,CENTERID,PHYSICIANID,PATIENTID)
 
 ## ------------- store as new dataset 'TEVAR_PROC' to ensure easier access for modelling----------
-write.csv(TEVAR_PROC,path_lily[5])
+write.csv(TEVAR_PROC,path_jenn[5])
+#write.csv(TEVAR_PROC,path_lily[5])
+
 
 ```
 
